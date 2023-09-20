@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Speech-to-Text and Text to Speech Translation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f7f7f7;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+
+        h2 {
+            font-size: 24px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        select,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        p {
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Speech-to-Text and Text to Speech Translation</h1>
+
+        <h2>Speech to Text</h2>
+        <input type="file" accept="audio/*" id="audioFile">
+        <button id="convertSTT">Convert to Text</button>
+        <p id="sttResult"></p>
+
+        <h2>Translate to French</h2>
+        <p id="translatedFrench"></p>
+        <button id="convertFrenchTTS">Convert to French Audio</button>
+
+        <h2>Translate to Spanish</h2>
+        <p id="translatedSpanish"></p>
+        <button id="convertSpanishTTS">Convert to Spanish Audio</button>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#convertSTT').click(function() {
+                const audioFile = $('#audioFile')[0].files[0];
+                const formData = new FormData();
+                formData.append('audio', audioFile);
+
+                $.ajax({
+                    type: 'POST',
+                    url: '/stt',
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function(data) {
+                        $('#sttResult').text(data.text);
+
+                        $.ajax({
+                            type: 'POST',
+                            url: '/translate',
+                            data: { text: data.text, target: 'fr' },
+                            success: function(frenchData) {
+                                $('#translatedFrench').text(frenchData.translation);
+                            },
+                            error: function(error) {
+                                console.error(error);
+                                alert('Error translating to French.');
+                            }
+                        });
+
+                        $.ajax({
+                            type: 'POST',
+                            url: '/translate',
+                            data: { text: data.text, target: 'es' },
+                            success: function(spanishData) {
+                                $('#translatedSpanish').text(spanishData.translation);
+                            },
+                            error: function(error) {
+                                console.error(error);
+                                alert('Error translating to Spanish.');
+                            }
+                        });
+                    },
+                    error: function(error) {
+                        console.error(error);
+                        alert('Error converting speech to text.');
+                    }
+                });
+            });
+
+            $('#convertFrenchTTS').click(function() {
+                const text = $('#translatedFrench').text();
+                convertTextToSpeech(text, 'fr');
+            });
+
+            $('#convertSpanishTTS').click(function() {
+                const text = $('#translatedSpanish').text();
+                convertTextToSpeech(text, 'es');
+            });
+
+            function convertTextToSpeech(text, targetLanguage) {
+                $.ajax({
+                    type: 'POST',
+                    url: '/tts',
+                    data: { text: text, target_language: targetLanguage },
+                    xhrFields: {
+                        responseType: 'blob'
+                    },
+                    success: function(audioData) {
+                        const audioBlob = audioData;
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const audio = new Audio(audioUrl);
+                        audio.play();
+                    },
+                    error: function(error) {
+                        console.error(error);
+                        alert('Error converting text to speech.');
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
